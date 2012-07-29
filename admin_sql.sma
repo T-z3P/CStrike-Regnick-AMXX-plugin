@@ -112,6 +112,7 @@ public plugin_init()
 
 	register_concmd("amx_reloadadmins", "cmdReload", ADMIN_CFG)
 	register_concmd("amx_addadmin", "addadminfn", ADMIN_RCON, "<playername|auth> <accessflags> [password] [authtype] - add specified player as an admin to users.ini")
+	register_concmd("register", "RNRegister", ADMIN_USER, "<password> <e-mail> - register current nickname in database")
 
 	format(g_cmdLoopback, 15, "amxauth%c%c%c%c", random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'))
 
@@ -927,9 +928,111 @@ public RNMessage(id)
 	get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
-	show_hudmessage(id, "Your nickname is not registered!^nFor registering, go to %s", rn_message_site)
+	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^n 'register <email> <password>',^nor go to %s", rn_message_site)
 	
 	client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
 	
 	set_task(float(get_pcvar_num(amx_rn_message_time)), "RNMessage", id)
 }
+
+public RNRegister(id, level, cid)
+{
+	if (!cmd_access(id, level, cid, 2))
+		return PLUGIN_HANDLED
+	
+	new activation_key[25]
+	new cache[256]
+	new email[64]
+	new name[32]
+	new password[64]
+	new register_date = get_systime()
+	new register_date2[64]
+	
+	random_str(activation_key, charsmax(activation_key))
+	read_argv(1, email, 63)
+	read_argv(2, password, 31)
+	
+	new error[128], errno
+	new prefix[32]
+	
+	new Handle:info = SQL_MakeStdTuple()
+	new Handle:sql = SQL_Connect(info, errno, error, 127)
+	
+	get_cvar_string("amx_sql_table_prefix", prefix, 31)
+	get_time("%d/%m/%Y", register_date2, 63)
+	get_user_name(id,name,31)
+		
+	if (sql == Empty_Handle)
+	{
+		server_print("[AMXX] SQL Error: %s", error)
+		
+		return PLUGIN_HANDLED
+	}
+
+	new Handle:query
+	
+	query = SQL_PrepareQuery(sql, "INSERT INTO `%susers` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'ab')", prefix, name, password, email, register_date, activation_key)
+	
+	if (!SQL_Execute(query))
+	{
+		SQL_QueryError(query, error, 127)
+		server_print("[AMXX] SQL Error: %s", error)
+	} 
+	SQL_FreeHandle(query)
+	   
+	formatex(cache, sizeof(cache)-1, "SELECT ID FROM `%susers` WHERE login='%s'", prefix, name)
+	SQL_ThreadQuery(info, "RNGetUserID", cache)
+	
+	SQL_FreeHandle(sql)
+	SQL_FreeHandle(info)
+	
+	return PLUGIN_CONTINUE
+}
+
+public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
+{
+	new error[128], errno
+	new prefix[32]
+	new user_id
+	
+	new Handle:info = SQL_MakeStdTuple()
+	new Handle:sql = SQL_Connect(info, errno, error, 127)
+	
+	while(SQL_MoreResults(query))
+	{
+		user_id = SQL_ReadResult(query,0)    
+		SQL_NextRow(query)
+	}
+	
+	get_cvar_string("amx_sql_table_prefix", prefix, 31)
+	
+	new Handle:another_query
+	
+	another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", prefix, user_id)
+	
+	if (!SQL_Execute(another_query))
+	{
+		SQL_QueryError(another_query, error, 127)
+		server_print("[AMXX] SQL Error: %s", error)
+	} 
+	SQL_FreeHandle(another_query)
+	SQL_FreeHandle(sql)
+	SQL_FreeHandle(info)
+	
+	set_task(5.0, "cmdReload")
+	
+	return PLUGIN_CONTINUE
+} 
+
+random_str(output[], len)
+{
+	for(new i=0; i<len; i++)
+	{
+		output[i] = random_num('0', '9');
+	}
+    
+	output[len]=EOS;
+}
+/* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
+*{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
+*/
