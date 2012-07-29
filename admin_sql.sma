@@ -66,6 +66,7 @@ new bool:g_CaseSensitiveName[33];
 new amx_mode;
 new amx_password_field;
 new amx_default_access;
+new amx_rn_account_type;
 new amx_rn_message;
 new amx_rn_message_site;
 new amx_rn_message_time;
@@ -79,12 +80,13 @@ public plugin_init()
 #endif
 	register_dictionary("admin.txt")
 	register_dictionary("common.txt")
-	amx_mode=register_cvar("amx_mode", "1")
-	amx_password_field=register_cvar("amx_password_field", "_pw")
-	amx_default_access=register_cvar("amx_default_access", "")
-	amx_rn_message = register_cvar("amx_rn_message","1");
-	amx_rn_message_site = register_cvar("amx_rn_message_site","http://yoursitehere.com");
-	amx_rn_message_time = register_cvar("amx_rn_message_time","300.0"); // Float
+	amx_mode = register_cvar("amx_mode", "1")
+	amx_password_field = register_cvar("amx_password_field", "_pw")
+	amx_default_access = register_cvar("amx_default_access", "")
+	amx_rn_account_type = register_cvar("amx_rn_account_type","0") 
+	amx_rn_message = register_cvar("amx_rn_message","1")
+	amx_rn_message_site = register_cvar("amx_rn_message_site","http://yoursitehere.com")
+	amx_rn_message_time = register_cvar("amx_rn_message_time","300.0") // Float
 
 	register_cvar("amx_vote_ratio", "0.02")
 	register_cvar("amx_vote_time", "10")
@@ -909,6 +911,7 @@ public client_putinserver(id)
 	if (!is_dedicated_server() && id == 1)
 		return get_pcvar_num(amx_mode) ? accessUser(id) : PLUGIN_CONTINUE
 	
+	#if defined USING_SQL
 	if(!is_user_admin(id))
 	{
 		new rn_message = get_pcvar_num(amx_rn_message)
@@ -918,17 +921,19 @@ public client_putinserver(id)
 			set_task(10.0, "RNMessage", id)
 		}
 	}	
+	#endif
 	
 	return PLUGIN_CONTINUE
 }
 
+#if defined USING_SQL
 public RNMessage(id)
 {
 	new rn_message_site[32]
 	get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
-	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^n 'register <email> <password>',^nor go to %s", rn_message_site)
+	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^n'register <email> <password>',^nor go to %s", rn_message_site)
 	
 	client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
 	
@@ -940,26 +945,35 @@ public RNRegister(id, level, cid)
 	if (!cmd_access(id, level, cid, 2))
 		return PLUGIN_HANDLED
 	
+	if(is_user_admin(id))
+	{
+		client_print(id, print_console, "Your nickname is already registered.")
+		
+		return PLUGIN_HANDLED
+	}
+	
 	new activation_key[25]
+	new authid[64]
 	new cache[256]
 	new email[64]
+	new error[128]
+	new errno
+	new Handle:info = SQL_MakeStdTuple()
+	new Handle:query
+	new Handle:sql = SQL_Connect(info, errno, error, 127)
 	new name[32]
 	new password[64]
+	new password_field[32]
+	new prefix[32]
 	new register_date = get_systime()
-	new register_date2[64]
 	
 	random_str(activation_key, charsmax(activation_key))
 	read_argv(1, email, 63)
 	read_argv(2, password, 31)
-	
-	new error[128], errno
-	new prefix[32]
-	
-	new Handle:info = SQL_MakeStdTuple()
-	new Handle:sql = SQL_Connect(info, errno, error, 127)
-	
+
+	get_cvar_string("amx_password_field", password_field, 31)
 	get_cvar_string("amx_sql_table_prefix", prefix, 31)
-	get_time("%d/%m/%Y", register_date2, 63)
+	get_user_authid(id, authid, 63)
 	get_user_name(id,name,31)
 		
 	if (sql == Empty_Handle)
@@ -968,9 +982,7 @@ public RNRegister(id, level, cid)
 		
 		return PLUGIN_HANDLED
 	}
-
-	new Handle:query
-	
+		
 	query = SQL_PrepareQuery(sql, "INSERT INTO `%susers` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'ab')", prefix, name, password, email, register_date, activation_key)
 	
 	if (!SQL_Execute(query))
@@ -978,6 +990,7 @@ public RNRegister(id, level, cid)
 		SQL_QueryError(query, error, 127)
 		server_print("[AMXX] SQL Error: %s", error)
 	} 
+	
 	SQL_FreeHandle(query)
 	   
 	formatex(cache, sizeof(cache)-1, "SELECT ID FROM `%susers` WHERE login='%s'", prefix, name)
@@ -986,17 +999,24 @@ public RNRegister(id, level, cid)
 	SQL_FreeHandle(sql)
 	SQL_FreeHandle(info)
 	
+	client_print(id, print_console, "Your account is now registered.")
+	client_print(id, print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
+	client_print(id, print_console, "setinfo %s %s", password_field, password)
+	
 	return PLUGIN_CONTINUE
 }
 
 public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 {
-	new error[128], errno
-	new prefix[32]
-	new user_id
-	
+	new error[128]
+	new errno
+	new Handle:another_query
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
+	new prefix[32]
+	new rn_account_type = get_pcvar_num(amx_rn_account_type)
+	new server_id[32]
+	new user_id
 	
 	while(SQL_MoreResults(query))
 	{
@@ -1005,21 +1025,28 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	}
 	
 	get_cvar_string("amx_sql_table_prefix", prefix, 31)
+	get_cvar_string("amx_sql_serverid", server_id, 31)
 	
-	new Handle:another_query
-	
-	another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", prefix, user_id)
+	if(rn_account_type == 0)
+	{
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", prefix, user_id)
+	}
+	else
+	{
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '0')", prefix, user_id, server_id)
+	}
 	
 	if (!SQL_Execute(another_query))
 	{
 		SQL_QueryError(another_query, error, 127)
 		server_print("[AMXX] SQL Error: %s", error)
 	} 
+	
 	SQL_FreeHandle(another_query)
 	SQL_FreeHandle(sql)
 	SQL_FreeHandle(info)
 	
-	set_task(5.0, "cmdReload")
+	set_task(10.0, "cmdReload")
 	
 	return PLUGIN_CONTINUE
 } 
@@ -1033,6 +1060,7 @@ random_str(output[], len)
     
 	output[len]=EOS;
 }
+#endif
 /* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
 *{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
 */
