@@ -32,12 +32,6 @@
 *  version.
 */
 
-/**
- *
- * TODO: refactor this to match with CStrike-Regnick requirements
- *
- */
-
 // Uncomment for SQL version
 #define USING_SQL
 
@@ -933,11 +927,14 @@ public RNMessage(id)
 	get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
-	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^n'register <email> <password>',^nor go to %s", rn_message_site)
+	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^nregister <email> <password>^nor go to %s", rn_message_site)
 	
 	client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
 	
-	set_task(float(get_pcvar_num(amx_rn_message_time)), "RNMessage", id)
+	if(!is_user_admin(id))
+	{
+		set_task(float(get_pcvar_num(amx_rn_message_time)), "RNMessage", id)
+	}
 }
 
 public RNRegister(id, level, cid)
@@ -945,9 +942,12 @@ public RNRegister(id, level, cid)
 	if (!cmd_access(id, level, cid, 2))
 		return PLUGIN_HANDLED
 	
+	if (!is_user_connected(id))
+		return PLUGIN_CONTINUE
+	
 	if(is_user_admin(id))
 	{
-		client_print(id, print_console, "Your nickname is already registered.")
+		client_print(id, print_console, "Your nickname is already registered!")
 		
 		return PLUGIN_HANDLED
 	}
@@ -970,7 +970,21 @@ public RNRegister(id, level, cid)
 	random_str(activation_key, charsmax(activation_key))
 	read_argv(1, email, 63)
 	read_argv(2, password, 31)
-
+	
+	if(containi(email, "@")==-1)
+	{
+		client_print(id, print_console, "Invalid e-mail address!")
+		
+		return PLUGIN_HANDLED
+	}
+	
+	if(strlen(password) <= 5)
+	{
+		client_print(id, print_console, "Password must have at least 6 characters!")
+		
+		return PLUGIN_HANDLED
+	}
+	
 	get_cvar_string("amx_password_field", password_field, 31)
 	get_cvar_string("amx_sql_table_prefix", prefix, 31)
 	get_user_authid(id, authid, 63)
@@ -989,6 +1003,8 @@ public RNRegister(id, level, cid)
 	{
 		SQL_QueryError(query, error, 127)
 		server_print("[AMXX] SQL Error: %s", error)
+		
+		return PLUGIN_HANDLED
 	} 
 	
 	SQL_FreeHandle(query)
@@ -999,11 +1015,11 @@ public RNRegister(id, level, cid)
 	SQL_FreeHandle(sql)
 	SQL_FreeHandle(info)
 	
-	client_print(id, print_console, "Your account is now registered.")
+	client_print(id, print_console, "Your account is now registered!")
 	client_print(id, print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
 	client_print(id, print_console, "setinfo %s %s", password_field, password)
 	
-	return PLUGIN_CONTINUE
+	return PLUGIN_HANDLED
 }
 
 public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
@@ -1040,6 +1056,8 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	{
 		SQL_QueryError(another_query, error, 127)
 		server_print("[AMXX] SQL Error: %s", error)
+		
+		return PLUGIN_HANDLED
 	} 
 	
 	SQL_FreeHandle(another_query)
