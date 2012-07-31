@@ -108,7 +108,7 @@ public plugin_init()
 
 	register_concmd("amx_reloadadmins", "cmdReload", ADMIN_CFG)
 	register_concmd("amx_addadmin", "addadminfn", ADMIN_RCON, "<playername|auth> <accessflags> [password] [authtype] - add specified player as an admin to users.ini")
-	register_concmd("register", "RNRegister", ADMIN_USER, "<password> <e-mail> - register current nickname in database")
+	register_concmd("register", "RNRegister", ADMIN_USER, "<e-mail> <password> - register current nickname in database")
 
 	format(g_cmdLoopback, 15, "amxauth%c%c%c%c", random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'))
 
@@ -944,13 +944,6 @@ public RNRegister(id, level, cid)
 	
 	if (!is_user_connected(id))
 		return PLUGIN_CONTINUE
-	
-	if(is_user_admin(id))
-	{
-		client_print(id, print_console, "Your nickname is already registered!")
-		
-		return PLUGIN_HANDLED
-	}
 	
 	new activation_key[25]
 	new authid[64]
