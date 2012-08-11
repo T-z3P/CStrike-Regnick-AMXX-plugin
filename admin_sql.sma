@@ -923,16 +923,16 @@ public client_putinserver(id)
 #if defined USING_SQL
 public RNMessage(id)
 {
-	new rn_message_site[32]
-	get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
-	
-	set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
-	show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^nregister <email> <password>^nor go to %s", rn_message_site)
-	
-	client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
-	
 	if(!is_user_admin(id))
 	{
+		new rn_message_site[32]
+		get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
+	
+		set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
+		show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^nregister <email> <password>^nor go to %s", rn_message_site)
+	
+		client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
+	
 		set_task(float(get_pcvar_num(amx_rn_message_time)), "RNMessage", id)
 	}
 }
