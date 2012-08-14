@@ -1,0 +1,32 @@
+// SQL configuration file
+// File location: $moddir/addons/amxmodx/configs/sql.cfg
+
+// *NOTE* Linux users may encounter problems if they specify "localhost" instead of "127.0.0.1"
+// We recommend using your server IP address instead of its name
+
+// *NOTE* amx_sql_type specifies the DEFAULT database type which admin.sma will use.
+
+amx_sql_host	    "127.0.0.1"
+amx_sql_user	    "root"
+amx_sql_pass	    ""
+amx_sql_db		    "amx"
+amx_sql_table	    "admins"        // not used by cstrike-regnick
+amx_sql_type	    "mysql"
+
+// From which server we load users ?
+amx_sql_serverid    "1"
+
+// Database tables prefix
+amx_sql_table_prefix    "regnick_"
+
+// Type of the account that you can register in-game (0=global, 1=server only)
+amx_rn_account_type "0"
+
+// Show informational message in HUD ?
+amx_rn_message "1"
+
+// How often do we show this message ?
+amx_rn_message_time "300.0"
+
+// Where did you installed CStrike-Regnick ?
+amx_rn_message_site "http://www.example.com/regnick/"
