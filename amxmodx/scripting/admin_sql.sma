@@ -964,7 +964,7 @@ public RNRegister(id, level, cid)
 	read_argv(1, email, 63)
 	read_argv(2, password, 31)
 	
-	if(containi(email, "@")==-1)
+	if(containi(email, "@")==-1 || containi(email, "<")!=-1 || containi(email, ">")!=-1)
 	{
 		client_print(id, print_console, "Invalid e-mail address!")
 		
