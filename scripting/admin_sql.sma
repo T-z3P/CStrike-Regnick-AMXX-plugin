@@ -493,7 +493,7 @@ public adminSql()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
 	
 	server_print("[AMXX] Using serverID = %d ", get_cvar_num("amx_sql_serverid"));
-		
+
 	SQL_GetAffinity(type, 11)
 	
 	if (sql == Empty_Handle)
@@ -1049,16 +1049,6 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	
 	return PLUGIN_CONTINUE
 } 
-
-random_str(output[], len)
-{
-	for(new i=0; i<len; i++)
-	{
-		output[i] = random_num('0', '9');
-	}
-    
-	output[len]=EOS;
-}
 #endif
 /* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
 *{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }

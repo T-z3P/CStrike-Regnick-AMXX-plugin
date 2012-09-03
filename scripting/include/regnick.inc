@@ -6,10 +6,29 @@
  */
 
 /**
+ * Generate a random string
+ * 
+ * @access	private
+ * @param	array	output
+ * @param	int		len
+ * @return	string
+ */
+random_str(output[], len)
+{
+	for(new i=0; i<len; i++)
+	{
+		output[i] = random_num('0', '9');
+	}
+    
+	output[len]=EOS;
+}
+ 
+/**
  * Add prefix to specified table
  *
- * @param    string    name    	Table name
- * @param    string    prefix	Table prefix to add
+ * @access	public
+ * @param	array	name	Table name
+ * @return	string
  */
 public table_prefix(name[])
 {
@@ -20,7 +39,7 @@ public table_prefix(name[])
 	
 	return temp;
 }
- 
+
 /**
  * Get escaped server hostname.
  *
@@ -31,10 +50,9 @@ public table_prefix(name[])
  *   mysql_escape_hostname(server_name, charsmax(server_name));
  * </code>
  *
- * @param    const   source
- * @param    string  dest
- * @param    int     len
- * @return   void
+ * @param	array   dest
+ * @param	int     len
+ * @return	void
  */
 stock void:mysql_escape_hostname(dest[], len)
 {
@@ -42,7 +60,6 @@ stock void:mysql_escape_hostname(dest[], len)
 	get_cvar_string("hostname", name, charsmax(name))
 	mysql_escape_string(name, dest, len);
 }
-
 
 /**
  * Get escaped username.
@@ -54,10 +71,10 @@ stock void:mysql_escape_hostname(dest[], len)
  *   mysql_escape_username(id, admin_nick, charsmax(admin_nick));
  * </code>
  *
- * @param    const   source
- * @param    string  dest
- * @param    int     len
- * @return   void
+ * @param	int		id		Player ID
+ * @param	array   dest
+ * @param	int     len
+ * @return	void
  */
 stock void:mysql_escape_username(id, dest[], len)
 {
@@ -65,7 +82,6 @@ stock void:mysql_escape_username(id, dest[], len)
 	get_user_name(id,name,127);
 	mysql_escape_string(name,dest,len);
 }
-
 
 /**
  * Escape a string to prevent MySQL injection
@@ -75,10 +91,10 @@ stock void:mysql_escape_username(id, dest[], len)
  *   mysql_escape_string(str, safe_str, charsmax(safe_str));
  * </code>
  *
- * @param    const   source
- * @param    string  dest
- * @param    int     len
- * @return   void
+ * @param	array   source
+ * @param	array	dest
+ * @param	int     len
+ * @return	void
  */
 stock void:mysql_escape_string(const source[], dest[], len)
 {
@@ -93,4 +109,3 @@ stock void:mysql_escape_string(const source[], dest[], len)
 	replace_all(dest,len,"\x1a","\\x1a");
 	replace_all(dest,len,"^"","\^"");
 }
-
