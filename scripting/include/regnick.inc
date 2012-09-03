@@ -1,0 +1,98 @@
+/* CStrike-Regnick helper functions
+ *
+ * @copyright   (c) 2011 - 2012 Gentle Software Solutions 
+ * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License 
+ * @link        http://www.gentle.ro/ 
+ */
+
+/**
+ * Add prefix to specified table
+ *
+ * @param    string    name    	Table name
+ * @param    string    prefix	Table prefix to add
+ */
+public table_prefix(name[])
+{
+	new prefix[32], temp[128];
+	get_cvar_string("amx_sql_table_prefix", prefix, 31);
+	
+	format(temp, 127, "%s%s", prefix, name);
+	
+	return temp;
+}
+ 
+/**
+ * Get escaped server hostname.
+ *
+ * Safe to be used in MySQL query.
+ *
+ * <code>
+ *   new server_name[200]
+ *   mysql_escape_hostname(server_name, charsmax(server_name));
+ * </code>
+ *
+ * @param    const   source
+ * @param    string  dest
+ * @param    int     len
+ * @return   void
+ */
+stock void:mysql_escape_hostname(dest[], len)
+{
+	new name[256];
+	get_cvar_string("hostname", name, charsmax(name))
+	mysql_escape_string(name, dest, len);
+}
+
+
+/**
+ * Get escaped username.
+ *
+ * Safe to be used in MySQL query.
+ *
+ * <code>
+ *   new admin_nick[64]
+ *   mysql_escape_username(id, admin_nick, charsmax(admin_nick));
+ * </code>
+ *
+ * @param    const   source
+ * @param    string  dest
+ * @param    int     len
+ * @return   void
+ */
+stock void:mysql_escape_username(id, dest[], len)
+{
+	new name[128];
+	get_user_name(id,name,127);
+	mysql_escape_string(name,dest,len);
+}
+
+
+/**
+ * Escape a string to prevent MySQL injection
+ *
+ * <code>
+ *   new safe_str[128];
+ *   mysql_escape_string(str, safe_str, charsmax(safe_str));
+ * </code>
+ *
+ * @param    const   source
+ * @param    string  dest
+ * @param    int     len
+ * @return   void
+ */
+stock void:mysql_escape_string(const source[], dest[], len)
+{
+	copy(dest, len, source);
+	
+	replace_all(dest,len,"\\","\\\\");
+	replace_all(dest,len,"\0","\\0'");
+	replace_all(dest,len,"\n","\\n");
+	replace_all(dest,len,"\r","\\r");
+	replace_all(dest,len,"'","\'");
+	replace_all(dest,len,"`","\`");
+	replace_all(dest,len,"\x1a","\\x1a");
+	replace_all(dest,len,"^"","\^"");
+}
+/* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
+*{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
+*/
