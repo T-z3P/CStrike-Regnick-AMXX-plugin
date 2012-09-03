@@ -947,7 +947,6 @@ public RNRegister(id, level, cid)
 	new name[32]
 	new password[64]
 	new password_field[32]
-	//new prefix[32]
 	new register_date = get_systime()
 	
 	random_str(activation_key, charsmax(activation_key))
@@ -969,7 +968,6 @@ public RNRegister(id, level, cid)
 	}
 	
 	get_cvar_string("amx_password_field", password_field, 31)
-	//get_cvar_string("amx_sql_table_prefix", prefix, 31)
 	get_user_authid(id, authid, 63)
 	get_user_name(id,name,31)
 		
@@ -1013,6 +1011,7 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
 	new rn_account_type = get_pcvar_num(amx_rn_account_type)
+	new rn_group_id = get_pcvar_num(amx_sql_groupid)
 	new server_id[32]
 	new user_id
 	
@@ -1026,11 +1025,11 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	
 	if(rn_account_type == 0)
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", table_prefix("users_access"), user_id)
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '%d')", table_prefix("users_access"), user_id, rn_group_id)
 	}
 	else
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '0')", table_prefix("users_access"), user_id, server_id)
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '%d')", table_prefix("users_access"), user_id, server_id, rn_group_id)
 	}
 	
 	if (!SQL_Execute(another_query))

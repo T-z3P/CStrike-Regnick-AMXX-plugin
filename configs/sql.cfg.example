@@ -16,6 +16,9 @@ amx_sql_type	    "mysql"
 // From which server we load users ?
 amx_sql_serverid    "1"
 
+// In what group we should include new accounts ?
+amx_sql_groupid    "0"
+
 // Database tables prefix
 amx_sql_table_prefix    "regnick_"
 
