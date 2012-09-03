@@ -100,6 +100,7 @@ public plugin_init()
 	register_cvar("amx_sql_table", "admins")
 	register_cvar("amx_sql_serverid", "0")
 	register_cvar("amx_sql_table_prefix", "")
+	register_cvar("amx_sql_groupid", "0");
 #endif
 	register_cvar("amx_sql_host", "127.0.0.1")
 	register_cvar("amx_sql_user", "root")
@@ -1011,7 +1012,7 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
 	new rn_account_type = get_pcvar_num(amx_rn_account_type)
-	new rn_group_id = get_pcvar_num(amx_sql_groupid)
+	new rn_group_id = get_cvar_num("amx_sql_groupid");
 	new server_id[32]
 	new user_id
 	
