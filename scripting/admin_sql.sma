@@ -39,6 +39,7 @@
 #include <amxmisc>
 #if defined USING_SQL
 #include <sqlx>
+#include "include/regnick.inc"
 #endif
 
 //new Vector:AdminList;
@@ -485,16 +486,13 @@ loadSettings(szFilename[])
 #if defined USING_SQL
 public adminSql()
 {
-	new error[128], type[12], errno
-	new prefix[32]
+	new error[128], type[12], errno;
 	
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
 	
 	server_print("[AMXX] Using serverID = %d ", get_cvar_num("amx_sql_serverid"));
-	
-	get_cvar_string("amx_sql_table_prefix", prefix, 31)
-	
+		
 	SQL_GetAffinity(type, 11)
 	
 	if (sql == Empty_Handle)
@@ -539,10 +537,10 @@ public adminSql()
 			WHERE \
 			    (usr.active = 1) \
 			GROUP by usr.login;", 
-				table_prefix("users", prefix), 
-				table_prefix("users_access", prefix), 
+				table_prefix("users"), 
+				table_prefix("users_access"), 
 				get_cvar_num("amx_sql_serverid"), 
-				table_prefix("groups", prefix) 
+				table_prefix("groups") 
 			);
 	}
 	
@@ -596,14 +594,6 @@ public adminSql()
 	}
 	
 	return PLUGIN_HANDLED
-}
-
-
-public table_prefix(name[], prefix[])
-{
-	new temp[128];
-	format(temp, 127, "%s%s", prefix, name);
-	return temp;
 }
 #endif
 
@@ -957,7 +947,7 @@ public RNRegister(id, level, cid)
 	new name[32]
 	new password[64]
 	new password_field[32]
-	new prefix[32]
+	//new prefix[32]
 	new register_date = get_systime()
 	
 	random_str(activation_key, charsmax(activation_key))
@@ -979,7 +969,7 @@ public RNRegister(id, level, cid)
 	}
 	
 	get_cvar_string("amx_password_field", password_field, 31)
-	get_cvar_string("amx_sql_table_prefix", prefix, 31)
+	//get_cvar_string("amx_sql_table_prefix", prefix, 31)
 	get_user_authid(id, authid, 63)
 	get_user_name(id,name,31)
 		
@@ -990,7 +980,7 @@ public RNRegister(id, level, cid)
 		return PLUGIN_HANDLED
 	}
 		
-	query = SQL_PrepareQuery(sql, "INSERT INTO `%susers` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'ab')", prefix, name, password, email, register_date, activation_key)
+	query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'ab')", table_prefix("users"), name, password, email, register_date, activation_key)
 	
 	if (!SQL_Execute(query))
 	{
@@ -1002,7 +992,7 @@ public RNRegister(id, level, cid)
 	
 	SQL_FreeHandle(query)
 	   
-	formatex(cache, sizeof(cache)-1, "SELECT ID FROM `%susers` WHERE login='%s'", prefix, name)
+	formatex(cache, sizeof(cache)-1, "SELECT ID FROM `%s` WHERE login='%s'", table_prefix("users"), name)
 	SQL_ThreadQuery(info, "RNGetUserID", cache)
 	
 	SQL_FreeHandle(sql)
@@ -1022,7 +1012,6 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	new Handle:another_query
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql = SQL_Connect(info, errno, error, 127)
-	new prefix[32]
 	new rn_account_type = get_pcvar_num(amx_rn_account_type)
 	new server_id[32]
 	new user_id
@@ -1033,16 +1022,15 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 		SQL_NextRow(query)
 	}
 	
-	get_cvar_string("amx_sql_table_prefix", prefix, 31)
-	get_cvar_string("amx_sql_serverid", server_id, 31)
+	get_cvar_string("amx_sql_serverid", server_id, 31);
 	
 	if(rn_account_type == 0)
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", prefix, user_id)
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '0')", table_prefix("users_access"), user_id)
 	}
 	else
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%susers_access` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '0')", prefix, user_id, server_id)
+		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '0')", table_prefix("users_access"), user_id, server_id)
 	}
 	
 	if (!SQL_Execute(another_query))
