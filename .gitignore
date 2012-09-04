@@ -1,0 +1,17 @@
+#
+# CStrike-Regnick AMXX plugin
+# http://www.gentle.ro/proiecte/cstrike-regnick/
+# rev 001
+
+# development environment specific data
+.dev/*
+.build/*
+
+# other files and directories
+.DS_Store
+*.back
+*.bak
+
+# ignore this file
+!.gitignore
+!.gitmodules
