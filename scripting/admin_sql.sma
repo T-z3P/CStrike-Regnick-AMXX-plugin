@@ -75,11 +75,11 @@ public plugin_init()
 #endif
 	register_dictionary("admin.txt")
 	register_dictionary("common.txt")
-	amx_mode = register_cvar("amx_mode", "1")
-	amx_password_field = register_cvar("amx_password_field", "_pw")
-	amx_default_access = register_cvar("amx_default_access", "")
+	amx_mode			= register_cvar("amx_mode", "1")
+	amx_password_field	= register_cvar("amx_password_field", "_pw")
+	amx_default_access	= register_cvar("amx_default_access", "")
 	amx_rn_account_type = register_cvar("amx_rn_account_type","0") 
-	amx_rn_message = register_cvar("amx_rn_message","1")
+	amx_rn_message		= register_cvar("amx_rn_message","1")
 	amx_rn_message_site = register_cvar("amx_rn_message_site","http://yoursitehere.com")
 	amx_rn_message_time = register_cvar("amx_rn_message_time","300.0") // Float
 
@@ -490,7 +490,7 @@ public adminSql()
 	new error[128], type[12], errno;
 	
 	new Handle:info = SQL_MakeStdTuple()
-	new Handle:sql = SQL_Connect(info, errno, error, 127)
+	new Handle:sql	= SQL_Connect(info, errno, error, 127)
 	
 	server_print("[AMXX] Using serverID = %d ", get_cvar_num("amx_sql_serverid"));
 
@@ -979,7 +979,7 @@ public RNRegister(id, level, cid)
 		return PLUGIN_HANDLED
 	}
 		
-	query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'ab')", table_prefix("users"), name, password, email, register_date, activation_key)
+	query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'a')", table_prefix("users"), name, password, email, register_date, activation_key)
 	
 	if (!SQL_Execute(query))
 	{
@@ -1009,11 +1009,11 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 	new error[128]
 	new errno
 	new Handle:another_query
-	new Handle:info = SQL_MakeStdTuple()
-	new Handle:sql = SQL_Connect(info, errno, error, 127)
-	new rn_account_type = get_pcvar_num(amx_rn_account_type)
-	new rn_group_id = get_cvar_num("amx_sql_groupid");
-	new server_id[32]
+	new Handle:info		= SQL_MakeStdTuple()
+	new Handle:sql		= SQL_Connect(info, errno, error, 127)
+	new rn_account_type	= get_pcvar_num(amx_rn_account_type)
+	new rn_group_id 	= get_cvar_num("amx_sql_groupid");
+	new server_id		= get_cvar_num("amx_sql_serverid");
 	new user_id
 	
 	while(SQL_MoreResults(query))
@@ -1021,9 +1021,7 @@ public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
 		user_id = SQL_ReadResult(query,0)    
 		SQL_NextRow(query)
 	}
-	
-	get_cvar_string("amx_sql_serverid", server_id, 31);
-	
+		
 	if(rn_account_type == 0)
 	{
 		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '%d')", table_prefix("users_access"), user_id, rn_group_id)
