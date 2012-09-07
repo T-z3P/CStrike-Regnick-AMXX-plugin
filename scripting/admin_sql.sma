@@ -726,7 +726,7 @@ public RNRegister(id, level, cid)
 	if (get_cvar_num("amx_rn_user_reg") == 0)
 	{
 		client_print(id, print_console, "[RN] New user registration is closed.");
-		#if defined USING_SQL
+		#if defined RN_DEBUG
 			server_print("[RN] New user registration is closed.");
 		#endif
 		
@@ -898,6 +898,9 @@ public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data
 
 public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data[], size)
 {
+	new password_field[32]
+	get_cvar_string("amx_password_field", password_field, 31)
+	
 	if (failstate)
 	{
 		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
@@ -922,7 +925,11 @@ public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data
 	}
 	
 	client_print(g_eRegData[REG_ID], print_console, "Your account is now registered!")
+	client_print(g_eRegData[REG_ID], print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
+	client_print(g_eRegData[REG_ID], print_console, "setinfo %s %s", password_field, g_eRegData[REG_PASS])
 	g_eRegData[REG_ID] = 0;
+	
+	set_task(10.0, "cmdReload")
 	
 	return PLUGIN_HANDLED
 }
@@ -934,10 +941,13 @@ MySqlX_ThreadError(szQuery[], error[], errnum, failstate, id) {
 	if (failstate == TQUERY_CONNECT_FAILED) {
 		log_amx("[RN] DB connection failed")
 	} else if (failstate == TQUERY_QUERY_FAILED) {
-		log_amx("[RN] Query failed!");
+		log_amx("[RN] Query failed!")
 	}
-	log_amx("[RN] Threaded Query Error on ID: #%d", id);
+	log_amx("[RN] Threaded Query Error on ID: #%d", id)
 	log_amx("[RN] Error message: %s (%d)", error, errnum);
 	log_amx("[RN] Query statement: %s", szQuery);
 }
 #endif
+/* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
+*{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
+*/
