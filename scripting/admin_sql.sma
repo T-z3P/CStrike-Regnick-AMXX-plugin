@@ -35,6 +35,15 @@
 // Uncomment for SQL version
 #define USING_SQL
 
+// Uncomment for CStrike-Regnick debug
+#define RN_DEBUG
+
+/**
+ * Uncomment for passwords encryption
+ * 	- not used for now
+ */
+//#define RN_ENC_PASSWD
+
 #include <amxmodx>
 #include <amxmisc>
 #if defined USING_SQL
@@ -45,8 +54,6 @@
 //new Vector:AdminList;
 
 new AdminCount;
-
-new PLUGINNAME[] = "AMX Mod X"
 
 #define ADMIN_LOOKUP	(1<<0)
 #define ADMIN_NORMAL	(1<<1)
@@ -61,15 +68,25 @@ new bool:g_CaseSensitiveName[33];
 new amx_mode;
 new amx_password_field;
 new amx_default_access;
-new amx_rn_account_type;
-new amx_rn_message;
-new amx_rn_message_site;
-new amx_rn_message_time;
+
+// CStrike-Regnick
+new Handle:g_Tuple;
+
+enum _:RegData
+{
+    REG_ID,
+    REG_USER[33],
+	REG_PASS[65],
+    REG_EMAIL[65],
+	REG_KEY[33]
+};
+new g_eRegData[RegData];
+
 
 public plugin_init()
 {
 #if defined USING_SQL
-	register_plugin("Admin Base (SQL)", AMXX_VERSION_STR, "AMXX Dev Team")
+	register_plugin("Admin Base (SQL)", AMXX_VERSION_STR, "AMXX Dev Team & Gentle Software Solutions")
 #else
 	register_plugin("Admin Base", AMXX_VERSION_STR, "AMXX Dev Team")
 #endif
@@ -78,11 +95,7 @@ public plugin_init()
 	amx_mode			= register_cvar("amx_mode", "1")
 	amx_password_field	= register_cvar("amx_password_field", "_pw")
 	amx_default_access	= register_cvar("amx_default_access", "")
-	amx_rn_account_type = register_cvar("amx_rn_account_type","0") 
-	amx_rn_message		= register_cvar("amx_rn_message","1")
-	amx_rn_message_site = register_cvar("amx_rn_message_site","http://yoursitehere.com")
-	amx_rn_message_time = register_cvar("amx_rn_message_time","300.0") // Float
-
+	
 	register_cvar("amx_vote_ratio", "0.02")
 	register_cvar("amx_vote_time", "10")
 	register_cvar("amx_vote_answers", "1")
@@ -97,10 +110,15 @@ public plugin_init()
 
 #if defined USING_SQL
 	register_srvcmd("amx_sqladmins", "adminSql")
-	register_cvar("amx_sql_table", "admins")
-	register_cvar("amx_sql_serverid", "0")
+	
 	register_cvar("amx_sql_table_prefix", "")
-	register_cvar("amx_sql_groupid", "0");
+	register_cvar("amx_rn_serverid", "0");
+	register_cvar("amx_rn_groupid", "0");
+	register_cvar("amx_rn_user_reg", "0");
+	register_cvar("amx_rn_account_type","0") 
+	register_cvar("amx_rn_message","1")
+	register_cvar("amx_rn_message_site","http://yoursitehere.com")
+	register_cvar("amx_rn_message_time","300.0") // Float
 #endif
 	register_cvar("amx_sql_host", "127.0.0.1")
 	register_cvar("amx_sql_user", "root")
@@ -109,7 +127,6 @@ public plugin_init()
 	register_cvar("amx_sql_type", "mysql")
 
 	register_concmd("amx_reloadadmins", "cmdReload", ADMIN_CFG)
-	register_concmd("amx_addadmin", "addadminfn", ADMIN_RCON, "<playername|auth> <accessflags> [password] [authtype] - add specified player as an admin to users.ini")
 	register_concmd("register", "RNRegister", ADMIN_USER, "<e-mail> <password> - register current nickname in database")
 
 	format(g_cmdLoopback, 15, "amxauth%c%c%c%c", random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'), random_num('A', 'Z'))
@@ -139,256 +156,7 @@ public client_connect(id)
 {
 	g_CaseSensitiveName[id] = false;
 }
-public addadminfn(id, level, cid)
-{
-	if (!cmd_access(id, level, cid, 3))
-		return PLUGIN_HANDLED
-		
-	new idtype = ADMIN_STEAM | ADMIN_LOOKUP
 
-	if (read_argc() >= 5)
-	{
-		new t_arg[16]
-		read_argv(4, t_arg, 15)
-		
-		if (equali(t_arg, "steam") || equali(t_arg, "steamid") || equali(t_arg, "auth"))
-		{
-			idtype = ADMIN_STEAM
-		}
-		else if (equali(t_arg, "ip"))
-		{
-			idtype = ADMIN_IPADDR
-		}
-		else if (equali(t_arg, "name") || equali(t_arg, "nick"))
-		{
-			idtype = ADMIN_NAME
-			
-			if (equali(t_arg, "name"))
-				idtype |= ADMIN_LOOKUP
-		} else {
-			console_print(id, "[%s] Unknown id type ^"%s^", use one of: steamid, ip, name", PLUGINNAME, t_arg)
-			return PLUGIN_HANDLED
-		}
-	}
-
-	new arg[33]
-	read_argv(1, arg, 32)
-	new player = -1
-	
-	if (idtype & ADMIN_STEAM)
-	{
-		if (containi(arg, "STEAM_0:") == -1)
-		{
-			idtype |= ADMIN_LOOKUP
-			player = cmd_target(id, arg, CMDTARGET_ALLOW_SELF | CMDTARGET_NO_BOTS)
-		} else {
-			new _steamid[44]
-			static _players[32], _num, _pv
-			get_players(_players, _num)
-			for (new _i=0; _i<_num; _i++)
-			{
-				_pv = _players[_i]
-				get_user_authid(_pv, _steamid, sizeof(_steamid)-1)
-				if (!_steamid[0])
-					continue
-				if (equal(_steamid, arg))
-				{
-					player = _pv
-					break
-				}
-			}	
-			if (player < 1)
-			{
-				idtype &= ~ADMIN_LOOKUP
-			}		
-		}
-	}
-	else if (idtype & ADMIN_NAME)
-	{
-		player = cmd_target(id, arg, CMDTARGET_ALLOW_SELF | CMDTARGET_NO_BOTS)
-		
-		if (player)
-			idtype |= ADMIN_LOOKUP
-		else
-			idtype &= ~ADMIN_LOOKUP
-	}
-	else if (idtype & ADMIN_IPADDR)
-	{
-		new len = strlen(arg)
-		new dots, chars
-		
-		for (new i = 0; i < len; i++)
-		{
-			if (arg[i] == '.')
-			{
-				if (!chars || chars > 3)
-					break
-				
-				if (++dots > 3)
-					break
-				
-				chars = 0
-			} else {
-				chars++
-			}
-			
-			if (dots != 3 || !chars || chars > 3)
-			{
-				idtype |= ADMIN_LOOKUP
-				player = find_player("dh", arg)
-			}
-		}
-	}
-	
-	if (idtype & ADMIN_LOOKUP && !player)
-	{
-		console_print(id, "%L", id, "CL_NOT_FOUND")
-		return PLUGIN_HANDLED
-	}
-	
-	new flags[64]
-	read_argv(2, flags, 63)
-
-	new password[64]
-	if (read_argc() >= 4)
-		read_argv(3, password, 63)
-
-	new auth[33]
-	new Comment[33]; // name of player to pass to comment field
-	if (idtype & ADMIN_LOOKUP)
-	{
-		get_user_name(player, Comment, sizeof(Comment)-1)
-		if (idtype & ADMIN_STEAM)
-		{
-			get_user_authid(player, auth, 32)
-		}
-		else if (idtype & ADMIN_IPADDR)
-		{
-			get_user_ip(player, auth, 32)
-		}
-		else if (idtype & ADMIN_NAME)
-		{
-			get_user_name(player, auth, 32)
-		}
-	} else {
-		copy(auth, 32, arg)
-	}
-	
-	new type[16], len
-	
-	if (idtype & ADMIN_STEAM)
-		len += format(type[len], 15-len, "c")
-	else if (idtype & ADMIN_IPADDR)
-		len += format(type[len], 15-len, "d")
-	
-	if (strlen(password) > 0)
-		len += format(type[len], 15-len, "a")
-	else
-		len += format(type[len], 15-len, "e")
-	
-	AddAdmin(id, auth, flags, password, type, Comment)
-	cmdReload(id, ADMIN_CFG, 0)
-
-	if (player > 0)
-	{
-		new name[32]
-		get_user_info(player, "name", name, 31)
-		accessUser(player, name)
-	}
-
-	return PLUGIN_HANDLED
-}
-
-AddAdmin(id, auth[], accessflags[], password[], flags[], comment[]="")
-{
-#if defined USING_SQL
-	new error[128], errno
-
-	new Handle:info = SQL_MakeStdTuple()
-	new Handle:sql = SQL_Connect(info, errno, error, 127)
-	
-	if (sql == Empty_Handle)
-	{
-		server_print("[AMXX] %L", LANG_SERVER, "SQL_CANT_CON", error)
-		//backup to users.ini
-#endif
-		// Make sure that the users.ini file exists.
-		new configsDir[64]
-		get_configsdir(configsDir, 63)
-		format(configsDir, 63, "%s/users.ini", configsDir)
-
-		if (!file_exists(configsDir))
-		{
-			console_print(id, "[%s] File ^"%s^" doesn't exist.", PLUGINNAME, configsDir)
-			return
-		}
-
-		// Make sure steamid isn't already in file.
-		new line = 0, textline[256], len
-		const SIZE = 63
-		new line_steamid[SIZE + 1], line_password[SIZE + 1], line_accessflags[SIZE + 1], line_flags[SIZE + 1], parsedParams
-		
-		// <name|ip|steamid> <password> <access flags> <account flags>
-		while ((line = read_file(configsDir, line, textline, 255, len)))
-		{
-			if (len == 0 || equal(textline, ";", 1))
-				continue // comment line
-
-			parsedParams = parse(textline, line_steamid, SIZE, line_password, SIZE, line_accessflags, SIZE, line_flags, SIZE)
-			
-			if (parsedParams != 4)
-				continue	// Send warning/error?
-			
-			if (containi(line_flags, flags) != -1 && equal(line_steamid, auth))
-			{
-				console_print(id, "[%s] %s already exists!", PLUGINNAME, auth)
-				return
-			}
-		}
-
-		// If we came here, steamid doesn't exist in users.ini. Add it.
-		new linetoadd[512]
-		
-		if (comment[0]==0)
-		{
-			formatex(linetoadd, 511, "^r^n^"%s^" ^"%s^" ^"%s^" ^"%s^"", auth, password, accessflags, flags)
-		}
-		else
-		{
-			formatex(linetoadd, 511, "^r^n^"%s^" ^"%s^" ^"%s^" ^"%s^" ; %s", auth, password, accessflags, flags, comment)
-		}
-		console_print(id, "Adding:^n%s", linetoadd)
-
-		if (!write_file(configsDir, linetoadd))
-			console_print(id, "[%s] Failed writing to %s!", PLUGINNAME, configsDir)
-#if defined USING_SQL
-	}
-	
-	new table[32]
-	
-	get_cvar_string("amx_sql_table", table, 31)
-	
-	new Handle:query = SQL_PrepareQuery(sql, "SELECT * FROM `%s` WHERE (`auth` = '%s')", table, auth)
-
-	if (!SQL_Execute(query))
-	{
-		SQL_QueryError(query, error, 127)
-		server_print("[AMXX] %L", LANG_SERVER, "SQL_CANT_LOAD_ADMINS", error)
-		console_print(id, "[AMXX] %L", LANG_SERVER, "SQL_CANT_LOAD_ADMINS", error)
-	} else if (SQL_NumResults(query)) {
-		console_print(id, "[%s] %s already exists!", PLUGINNAME, auth)
-	} else {
-		console_print(id, "Adding to database:^n^"%s^" ^"%s^" ^"%s^" ^"%s^"", auth, password, accessflags, flags)
-	
-		SQL_QueryAndIgnore(sql, "REPLACE INTO `%s` (`auth`, `password`, `access`, `flags`) VALUES ('%s', '%s', '%s', '%s')", table, auth, password, accessflags, flags)
-	}
-	
-	SQL_FreeHandle(query)
-	SQL_FreeHandle(sql)
-	SQL_FreeHandle(info)
-#endif
-
-}
 public plugin_cfg()
 {
 	set_task(6.1, "delayed_load")
@@ -427,6 +195,25 @@ public delayed_load()
 		server_cmd("exec %s", configFile)
 	}
 	
+	// CStrike-Regnick
+	g_Tuple = SQL_MakeStdTuple();
+	
+	#if defined RN_DEBUG
+		new tbl_prefix[32]
+		get_cvar_string("amx_sql_table_prefix", tbl_prefix, charsmax(tbl_prefix))
+		
+		new website[128]
+		get_cvar_string("amx_rn_message_site", website, charsmax(website))
+		
+		server_print("[RN_DEBUG] Table prefix: %s", tbl_prefix)
+		server_print("[RN_DEBUG] Using server ID: %d", get_cvar_num("amx_rn_serverid"))
+		server_print("[RN_DEBUG] Using group ID: %d", get_cvar_num("amx_rn_groupid"))
+		server_print("[RN_DEBUG] User registration: %d", get_cvar_num("amx_rn_user_reg"))
+		server_print("[RN_DEBUG] Account type: %d", get_cvar_num("amx_rn_account_type"))
+		server_print("[RN_DEBUG] Show info message to unregistred users: %d", get_cvar_num("amx_rn_message"))
+		server_print("[RN_DEBUG] Info message time show: %f", get_cvar_float("amx_rn_message_time") )
+		server_print("[RN_DEBUG] CStrike-Regnick website: %s", website)
+	#endif
 }
 
 loadSettings(szFilename[])
@@ -492,7 +279,7 @@ public adminSql()
 	new Handle:info = SQL_MakeStdTuple()
 	new Handle:sql	= SQL_Connect(info, errno, error, 127)
 	
-	server_print("[AMXX] Using serverID = %d ", get_cvar_num("amx_sql_serverid"));
+	server_print("[AMXX] Using serverID = %d ", get_cvar_num("amx_rn_serverid"));
 
 	SQL_GetAffinity(type, 11)
 	
@@ -540,7 +327,7 @@ public adminSql()
 			GROUP by usr.login;", 
 				table_prefix("users"), 
 				table_prefix("users_access"), 
-				get_cvar_num("amx_sql_serverid"), 
+				get_cvar_num("amx_rn_serverid"), 
 				table_prefix("groups") 
 			);
 	}
@@ -899,7 +686,8 @@ public client_putinserver(id)
 	#if defined USING_SQL
 	if(!is_user_admin(id))
 	{
-		new rn_message = get_pcvar_num(amx_rn_message)
+		//new rn_message = get_pcvar_num(amx_rn_message)
+		new rn_message = get_cvar_num("amx_rn_message")
 		
 		if(rn_message == 1)
 		{
@@ -916,138 +704,240 @@ public RNMessage(id)
 {
 	if(!is_user_admin(id))
 	{
-		new rn_message_site[32]
-		get_pcvar_string(amx_rn_message_site, rn_message_site, 31)
-	
+		new rn_message_site[128]
+		get_cvar_string("amx_rn_message_site", rn_message_site, charsmax(rn_message_site))
+		
 		set_hudmessage(255, 255, 255, -1.0, 0.60, 0, 6.0, 10.0)
 		show_hudmessage(id, "Your nickname is not registered!^n^nFor registering, type in your console^nregister <email> <password>^nor go to %s", rn_message_site)
-	
+		
 		client_cmd(id,"spk ^"vox/warning _comma unauthorized access^"")
-	
-		set_task(float(get_pcvar_num(amx_rn_message_time)), "RNMessage", id)
+		
+		set_task(get_cvar_float("amx_rn_message_time"), "RNMessage", id)
 	}
 }
 
 public RNRegister(id, level, cid)
 {
 	if (!cmd_access(id, level, cid, 2))
+	{
 		return PLUGIN_HANDLED
+	}
 	
-	if (!is_user_connected(id))
-		return PLUGIN_CONTINUE
+	if (get_cvar_num("amx_rn_user_reg") == 0)
+	{
+		client_print(id, print_console, "[RN] New user registration is closed.");
+		#if defined USING_SQL
+			server_print("[RN] New user registration is closed.");
+		#endif
+		
+		return PLUGIN_HANDLED;
+	}
 	
-	new activation_key[25]
-	new authid[64]
-	new cache[256]
-	new email[64]
-	new error[128]
-	new errno
-	new Handle:info = SQL_MakeStdTuple()
-	new Handle:query
-	new Handle:sql = SQL_Connect(info, errno, error, 127)
-	new name[32]
-	new password[64]
-	new password_field[32]
-	new register_date = get_systime()
+	// allow only one account at a time to be created
+	if (g_eRegData[REG_ID] > 0)
+	{
+		client_print(id, print_console, "[RN] System busy. Please try again later.");
+	}
 	
-	random_str(activation_key, charsmax(activation_key))
-	read_argv(1, email, 63)
-	read_argv(2, password, 31)
+	new name[33], email[65], pass[65];
+	read_argv(1, email, charsmax(email)-1)
+	read_argv(2, pass, charsmax(pass)-1)
+	get_user_name(id, name, charsmax(name)-1);
 	
 	if(containi(email, "@")==-1 || containi(email, "<")!=-1 || containi(email, ">")!=-1)
 	{
-		client_print(id, print_console, "Invalid e-mail address!")
+		client_print(id, print_console, "[RN] Invalid e-mail address!")
+		#if defined RN_DEBUG
+			server_print("[RN] Invalid e-mail address!");
+		#endif
+		return PLUGIN_HANDLED
+	}
+	
+	if(strlen(pass) < 6)
+	{
+		client_print(id, print_console, "[RN] Password must have at least 6 characters!")
+		#if defined RN_DEBUG
+			server_print("[RN] Password must have at least 6 characters!");
+		#endif
+		return PLUGIN_HANDLED
+	}
+	
+	// ****************************************************************************** 
+
+	g_eRegData[REG_ID] 		= id
+	g_eRegData[REG_USER]	= name
+	g_eRegData[REG_PASS]	= pass;
+	g_eRegData[REG_EMAIL]	= email;
+	
+	new pquery[1024];
+	
+	formatex(pquery, charsmax(pquery), "SELECT id, login, email FROM `%s` WHERE (`login` = '%s' OR `email` = '%s')", table_prefix("users"), name, email );
+	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Duplicate_Hnd", pquery);
+	
+	return PLUGIN_HANDLED;
+}
+
+public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[], size)
+{
+	#if !defined RN_DEBUG
+		// Jhon, are you still there ?
+		if (!is_user_connected(g_eRegData[REG_ID]))
+		{
+			return PLUGIN_HANDLED
+		}
+	#endif
+	
+	if (failstate)
+	{
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
+		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
+		#endif
+		return PLUGIN_HANDLED
+	}
+	
+	if (errnum)
+	{
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
+		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
+		#endif
 		
 		return PLUGIN_HANDLED
 	}
 	
-	if(strlen(password) <= 5)
+	if (SQL_NumResults(query))
 	{
-		client_print(id, print_console, "Password must have at least 6 characters!")
+		client_print(g_eRegData[REG_ID], print_console, "[RN] User and/or email has been used by someone else.")
+		
+		#if defined RN_DEBUG
+			server_print("[RN] User and/or email has been used by someone else.");
+		#endif
 		
 		return PLUGIN_HANDLED
 	}
 	
-	get_cvar_string("amx_password_field", password_field, 31)
-	get_user_authid(id, authid, 63)
-	get_user_name(id,name,31)
-		
-	if (sql == Empty_Handle)
-	{
-		server_print("[AMXX] SQL Error: %s", error)
-		
-		return PLUGIN_HANDLED
-	}
-		
-	query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`) VALUES ('%s', '%s', '%s', '%d', '1', '%s', 'a')", table_prefix("users"), name, password, email, register_date, activation_key)
+	#if defined RN_DEBUG
+		server_print("[RN] User %s can register", g_eRegData[REG_USER]);
+	#endif
 	
-	if (!SQL_Execute(query))
-	{
-		SQL_QueryError(query, error, 127)
-		server_print("[AMXX] SQL Error: %s", error)
-		
-		return PLUGIN_HANDLED
-	} 
+	new pquery[1024], activation_key[25]
+	new register_date	= get_systime()
 	
-	SQL_FreeHandle(query)
-	   
-	formatex(cache, sizeof(cache)-1, "SELECT ID FROM `%s` WHERE login='%s'", table_prefix("users"), name)
-	SQL_ThreadQuery(info, "RNGetUserID", cache)
+	random_str(activation_key, charsmax(activation_key))
 	
-	SQL_FreeHandle(sql)
-	SQL_FreeHandle(info)
+	formatex(pquery, charsmax(pquery), "\
+		INSERT INTO `%s` \
+			(`login`, `password`, `email`, `register_date`, `active`, `activation_key`, `account_flags`, `last_login`, `passwd_type`) \
+		VALUES \
+			('%s', '%s', '%s', '%d', '1', '%s', 'a', '0', '0'); ", 
+		table_prefix("users"), 
+			g_eRegData[REG_USER], g_eRegData[REG_PASS], g_eRegData[REG_EMAIL], register_date, activation_key
+	);
 	
-	client_print(id, print_console, "Your account is now registered!")
-	client_print(id, print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
-	client_print(id, print_console, "setinfo %s %s", password_field, password)
+	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Insert_Acc_Hnd", pquery);
 	
 	return PLUGIN_HANDLED
 }
 
-public RNGetUserID(FailState, Handle:query, error[], Errcode, Data[], DataSize)
+public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data[], size)
 {
-	new error[128]
-	new errno
-	new Handle:another_query
-	new Handle:info		= SQL_MakeStdTuple()
-	new Handle:sql		= SQL_Connect(info, errno, error, 127)
-	new rn_account_type	= get_pcvar_num(amx_rn_account_type)
-	new rn_group_id 	= get_cvar_num("amx_sql_groupid");
-	new server_id		= get_cvar_num("amx_sql_serverid");
-	new user_id
-	
-	while(SQL_MoreResults(query))
+	if (failstate)
 	{
-		user_id = SQL_ReadResult(query,0)    
-		SQL_NextRow(query)
-	}
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
 		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
+		#endif
+		return PLUGIN_HANDLED
+	}
+	
+	if (errnum)
+	{
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
+		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
+		#endif
+		
+		return PLUGIN_HANDLED
+	}
+	
+	new user_id			= SQL_GetInsertId(query)
+	new rn_group_id		= get_cvar_num("amx_rn_groupid")
+	new rn_account_type	= get_cvar_num("amx_rn_account_type")
+	new rn_server_id	= get_cvar_num("amx_rn_serverid");
+	
+	new pquery[1024]
+	
 	if(rn_account_type == 0)
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '%d')", table_prefix("users_access"), user_id, rn_group_id)
+		formatex(pquery, charsmax(pquery), "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '0', '%d')", 
+			table_prefix("users_access"), 
+				user_id, rn_group_id
+		);
 	}
 	else
 	{
-		another_query = SQL_PrepareQuery(sql, "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', '%d', '%d')", table_prefix("users_access"), user_id, server_id, rn_group_id)
+		formatex(pquery, charsmax(pquery), "INSERT INTO `%s` (`user_ID`, `server_ID`, `group_ID`) VALUES ('%d', %d, '%d')", 
+			table_prefix("users_access"), 
+				user_id, rn_server_id, rn_group_id
+		);
 	}
 	
-	if (!SQL_Execute(another_query))
+	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Insert_Grp_Hnd", pquery);
+	
+	return PLUGIN_HANDLED
+}
+
+public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data[], size)
+{
+	if (failstate)
 	{
-		SQL_QueryError(another_query, error, 127)
-		server_print("[AMXX] SQL Error: %s", error)
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
+		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
+		#endif
+		return PLUGIN_HANDLED
+	}
+	
+	if (errnum)
+	{
+		client_print(g_eRegData[REG_ID], print_console, "[RN] Please try again later.")
+		
+		#if defined RN_DEBUG
+			new szQuery[256]
+			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
+		#endif
 		
 		return PLUGIN_HANDLED
-	} 
+	}
 	
-	SQL_FreeHandle(another_query)
-	SQL_FreeHandle(sql)
-	SQL_FreeHandle(info)
+	client_print(g_eRegData[REG_ID], print_console, "Your account is now registered!")
+	g_eRegData[REG_ID] = 0;
 	
-	set_task(10.0, "cmdReload")
-	
-	return PLUGIN_CONTINUE
-} 
+	return PLUGIN_HANDLED
+}
+
+/**
+ * Deal with errors
+ */
+MySqlX_ThreadError(szQuery[], error[], errnum, failstate, id) {
+	if (failstate == TQUERY_CONNECT_FAILED) {
+		log_amx("[RN] DB connection failed")
+	} else if (failstate == TQUERY_QUERY_FAILED) {
+		log_amx("[RN] Query failed!");
+	}
+	log_amx("[RN] Threaded Query Error on ID: #%d", id);
+	log_amx("[RN] Error message: %s (%d)", error, errnum);
+	log_amx("[RN] Query statement: %s", szQuery);
+}
 #endif
-/* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
-*{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
-*/

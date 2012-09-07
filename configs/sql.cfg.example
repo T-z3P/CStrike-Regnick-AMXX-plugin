@@ -10,26 +10,45 @@ amx_sql_host	    "127.0.0.1"
 amx_sql_user	    "root"
 amx_sql_pass	    ""
 amx_sql_db		    "amx"
-amx_sql_table	    "admins"        // not used by cstrike-regnick
 amx_sql_type	    "mysql"
 
+// Database tables prefix
+//
+// Default value: "regnick_"
+amx_sql_table_prefix "regnick_"
+
 // From which server we load users ?
-amx_sql_serverid    "1"
+//
+// Default value: "1"
+amx_rn_serverid "1"
 
 // In what group we should include new accounts ?
-amx_sql_groupid    "0"
+//
+// Default value: "0"
+amx_rn_groupid "0"
 
-// Database tables prefix
-amx_sql_table_prefix    "regnick_"
+// Users can register from server ?
+//
+// Default value: "1"
+amx_rn_user_reg "1"
 
 // Type of the account you can register in-game (0=global account, 1=server only account)
+// Note: Setting this option to "1", all newly created accounts will be added on "amx_rn_serverid" server.
+//
+// Default value: "0"
 amx_rn_account_type "0"
 
-// Show informational message in HUD ?
+// Show informational message in HUD to unregistred users ?
+//
+// Default value: "1"
 amx_rn_message "1"
 
 // How often do we show this message ?
+//
+// Default value: "300.0"
 amx_rn_message_time "300.0"
 
 // Where did you installed CStrike-Regnick ?
+//
+// Default value: "http://www.example.com/regnick/"
 amx_rn_message_site "http://www.example.com/regnick/"
