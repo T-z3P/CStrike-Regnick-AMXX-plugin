@@ -159,6 +159,7 @@ public client_connect(id)
 
 public client_disconnect(id)
 {
+	#if defined USING_SQL
 	if((get_user_flags(id) & ADMIN_LEVEL_F)) 
 	{
 		new error[128], errno;
@@ -185,6 +186,7 @@ public client_disconnect(id)
 	}
 	
 	return PLUGIN_HANDLED
+	#endif
 }
 
 public plugin_cfg()
