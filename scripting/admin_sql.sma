@@ -48,7 +48,7 @@
 #include <amxmisc>
 #if defined USING_SQL
 #include <sqlx>
-#include "include/regnick.inc"
+#include <regnick>
 #endif
 
 //new Vector:AdminList;
