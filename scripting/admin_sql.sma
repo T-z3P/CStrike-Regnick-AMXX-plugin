@@ -157,6 +157,36 @@ public client_connect(id)
 	g_CaseSensitiveName[id] = false;
 }
 
+public client_disconnect(id)
+{
+	if((get_user_flags(id) & ADMIN_LEVEL_F)) 
+	{
+		new error[128], errno;
+		new Handle:info = SQL_MakeStdTuple()
+		new Handle:sql	= SQL_Connect(info, errno, error, 127)
+		new name[32]
+		new register_date = get_systime()
+		
+		get_user_name(id,name,31)
+		
+		new Handle:query = SQL_PrepareQuery(sql, "UPDATE `%s` SET `last_login`='%d' WHERE (`login` = '%s')", table_prefix("users"), register_date, name)
+		
+		if (!SQL_Execute(query))
+		{
+			SQL_QueryError(query, error, 127)
+			server_print("[AMXX] SQL Error: %s", error)
+			
+			return PLUGIN_HANDLED
+		} 
+	
+		SQL_FreeHandle(query)
+		SQL_FreeHandle(sql)
+		SQL_FreeHandle(info)
+	}
+	
+	return PLUGIN_HANDLED
+}
+
 public plugin_cfg()
 {
 	set_task(6.1, "delayed_load")
@@ -826,7 +856,7 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 	#endif
 	
 	new pquery[1024], activation_key[25]
-	new register_date	= get_systime()
+	new register_date = get_systime()
 	
 	random_str(activation_key, charsmax(activation_key))
 	
