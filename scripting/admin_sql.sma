@@ -826,6 +826,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		// Jhon, are you still there ?
 		if (!is_user_connected(g_eRegData[REG_ID]))
 		{
+			enable_registration()
+			
 			return PLUGIN_HANDLED
 		}
 	#endif
@@ -838,6 +840,9 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -850,6 +855,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
 		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -860,6 +867,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		#if defined RN_DEBUG
 			server_print("[RN] User and/or email has been used by someone else.");
 		#endif
+		
+		enable_registration()
 		
 		return PLUGIN_HANDLED
 	}
@@ -879,7 +888,7 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		VALUES \
 			('%s', '%s', '%s', '%d', '1', '%s', 'a', '0', '0'); ", 
 		table_prefix("users"), 
-			g_eRegData[REG_USER_SAFE], g_eRegData[REG_PASS], g_eRegData[REG_PASS_SAFE], register_date, activation_key
+			g_eRegData[REG_USER_SAFE], g_eRegData[REG_PASS_SAFE], g_eRegData[REG_PASS_SAFE], register_date, activation_key
 	);
 	
 	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Insert_Acc_Hnd", pquery);
@@ -897,6 +906,9 @@ public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -908,6 +920,8 @@ public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
+		
+		enable_registration()
 		
 		return PLUGIN_HANDLED
 	}
@@ -952,6 +966,9 @@ public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -964,17 +981,25 @@ public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
 		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
 	client_print(g_eRegData[REG_ID], print_console, "Your account is now registered!")
 	client_print(g_eRegData[REG_ID], print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
 	client_print(g_eRegData[REG_ID], print_console, "setinfo %s %s", password_field, g_eRegData[REG_PASS])
-	g_eRegData[REG_ID] = 0;
+	
+	enable_registration()
 	
 	set_task(10.0, "cmdReload")
 	
 	return PLUGIN_HANDLED
+}
+
+enable_registration()
+{
+	g_eRegData[REG_ID] = 0;
 }
 
 /**
