@@ -76,8 +76,11 @@ enum _:RegData
 {
     REG_ID,
     REG_USER[33],
+	REG_USER_SAFE[128],
 	REG_PASS[65],
+	REG_PASS_SAFE[128],
     REG_EMAIL[65],
+	REG_EMAIL_SAFE[128],
 	REG_KEY[33]
 };
 new g_eRegData[RegData];
@@ -776,6 +779,11 @@ public RNRegister(id, level, cid)
 	read_argv(2, pass, charsmax(pass)-1)
 	get_user_name(id, name, charsmax(name)-1);
 	
+	new safe_name[128], safe_email[128], safe_pass[128];
+	mysql_escape_string(name, safe_name, charsmax(safe_name));
+	mysql_escape_string(email, safe_email, charsmax(safe_email));
+	mysql_escape_string(pass, safe_pass, charsmax(safe_pass));
+	
 	if(containi(email, "@")==-1 || containi(email, "<")!=-1 || containi(email, ">")!=-1)
 	{
 		client_print(id, print_console, "[RN] Invalid e-mail address!")
@@ -796,14 +804,17 @@ public RNRegister(id, level, cid)
 	
 	// ****************************************************************************** 
 
-	g_eRegData[REG_ID] 		= id
-	g_eRegData[REG_USER]	= name
-	g_eRegData[REG_PASS]	= pass;
-	g_eRegData[REG_EMAIL]	= email;
+	g_eRegData[REG_ID] 			= id
+	g_eRegData[REG_USER]		= name
+	g_eRegData[REG_USER_SAFE]	= safe_name;
+	g_eRegData[REG_PASS]		= pass;
+	g_eRegData[REG_PASS_SAFE]	= safe_pass;
+	g_eRegData[REG_EMAIL]		= email;
+	g_eRegData[REG_EMAIL_SAFE]	= safe_email;
 	
 	new pquery[1024];
 	
-	formatex(pquery, charsmax(pquery), "SELECT id, login, email FROM `%s` WHERE (`login` = '%s' OR `email` = '%s')", table_prefix("users"), name, email );
+	formatex(pquery, charsmax(pquery), "SELECT id, login, email FROM `%s` WHERE (`login` = '%s' OR `email` = '%s')", table_prefix("users"), safe_name, safe_email );
 	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Duplicate_Hnd", pquery);
 	
 	return PLUGIN_HANDLED;
@@ -815,6 +826,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		// Jhon, are you still there ?
 		if (!is_user_connected(g_eRegData[REG_ID]))
 		{
+			enable_registration()
+			
 			return PLUGIN_HANDLED
 		}
 	#endif
@@ -827,6 +840,9 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -839,6 +855,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
 		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -849,6 +867,8 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		#if defined RN_DEBUG
 			server_print("[RN] User and/or email has been used by someone else.");
 		#endif
+		
+		enable_registration()
 		
 		return PLUGIN_HANDLED
 	}
@@ -868,7 +888,7 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		VALUES \
 			('%s', '%s', '%s', '%d', '1', '%s', 'a', '0', '0'); ", 
 		table_prefix("users"), 
-			g_eRegData[REG_USER], g_eRegData[REG_PASS], g_eRegData[REG_EMAIL], register_date, activation_key
+			g_eRegData[REG_USER_SAFE], g_eRegData[REG_PASS_SAFE], g_eRegData[REG_PASS_SAFE], register_date, activation_key
 	);
 	
 	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Insert_Acc_Hnd", pquery);
@@ -886,6 +906,9 @@ public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -897,6 +920,8 @@ public RN_Reg_User_Insert_Acc_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
+		
+		enable_registration()
 		
 		return PLUGIN_HANDLED
 	}
@@ -941,6 +966,9 @@ public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data
 			new szQuery[256]
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 10 )
 		#endif
+		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
@@ -953,17 +981,25 @@ public RN_Reg_User_Insert_Grp_Hnd(failstate, Handle:query, error[], errnum, data
 			MySqlX_ThreadError( szQuery, error, errnum, failstate, 11 )
 		#endif
 		
+		enable_registration()
+		
 		return PLUGIN_HANDLED
 	}
 	
 	client_print(g_eRegData[REG_ID], print_console, "Your account is now registered!")
 	client_print(g_eRegData[REG_ID], print_console, "Write the next line in your console, or you will be kicked in 10 seconds:")
 	client_print(g_eRegData[REG_ID], print_console, "setinfo %s %s", password_field, g_eRegData[REG_PASS])
-	g_eRegData[REG_ID] = 0;
+	
+	enable_registration()
 	
 	set_task(10.0, "cmdReload")
 	
 	return PLUGIN_HANDLED
+}
+
+enable_registration()
+{
+	g_eRegData[REG_ID] = 0;
 }
 
 /**
