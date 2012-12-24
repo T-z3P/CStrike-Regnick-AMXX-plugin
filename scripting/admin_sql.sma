@@ -888,7 +888,7 @@ public RN_Reg_User_Duplicate_Hnd(failstate, Handle:query, error[], errnum, data[
 		VALUES \
 			('%s', '%s', '%s', '%d', '1', '%s', 'a', '0', '0'); ", 
 		table_prefix("users"), 
-			g_eRegData[REG_USER_SAFE], g_eRegData[REG_PASS_SAFE], g_eRegData[REG_PASS_SAFE], register_date, activation_key
+			g_eRegData[REG_USER_SAFE], g_eRegData[REG_PASS_SAFE], g_eRegData[REG_EMAIL_SAFE], register_date, activation_key
 	);
 	
 	SQL_ThreadQuery(g_Tuple, "RN_Reg_User_Insert_Acc_Hnd", pquery);
