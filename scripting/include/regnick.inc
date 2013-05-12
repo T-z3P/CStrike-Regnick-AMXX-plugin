@@ -24,19 +24,17 @@ random_str(output[], len)
 }
 
 /**
- * Hash a password with a salt
+ * Return salted MD5 hash
  *
  * @access	public
- * @param	string	string	Clear text password
- * @return	string			Hashed password
+ * @param	string	string
+ * @return	string
  */
 public hash_password(string[])
 {
-	new hashed[34], salt[65], temp[98];
+	new hashed[34], temp[98];
 
-	get_cvar_string("amx_password_salt", salt, 64);
-
-	format(temp, 97, "%s%s", salt, string);
+	format(temp, 97, "%s%s", RN_SALT, string);
 	md5(temp, hashed);
 
 	return hashed;
@@ -128,4 +126,3 @@ stock void:mysql_escape_string(const source[], dest[], len)
 	replace_all(dest,len,"\x1a","\\x1a");
 	replace_all(dest,len,"^"","\^"");
 }
-

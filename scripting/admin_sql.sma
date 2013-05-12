@@ -43,11 +43,16 @@
  */
 #define RN_ENC_PASSWD
 
+/**
+ * Password salt
+ */
+new const RN_SALT[] = "CHANGE-ME"
+
 #include <amxmodx>
 #include <amxmisc>
 #if defined USING_SQL
-#include <sqlx>
-#include <regnick>
+	#include <sqlx>
+	#include <regnick>
 #endif
 
 //new Vector:AdminList;
@@ -114,10 +119,6 @@ public plugin_init()
 	register_srvcmd("amx_sqladmins", "adminSql")
 	
 	register_cvar("amx_sql_table_prefix", "")
-	
-	#if defined RN_ENC_PASSWD
-	register_cvar("amx_password_salt", "", FCVAR_PROTECTED|FCVAR_SPONLY)
-	#endif
 
 	register_cvar("amx_rn_serverid", "0");
 	register_cvar("amx_rn_groupid", "0");
@@ -750,7 +751,6 @@ public client_putinserver(id)
 	#if defined USING_SQL
 	if(!is_user_admin(id))
 	{
-		//new rn_message = get_pcvar_num(amx_rn_message)
 		new rn_message = get_cvar_num("amx_rn_message")
 		
 		if(rn_message == 1)
