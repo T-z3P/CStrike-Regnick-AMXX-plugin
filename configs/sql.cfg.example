@@ -17,6 +17,11 @@ amx_sql_type	    "mysql"
 // Default value: "regnick_"
 amx_sql_table_prefix "regnick_"
 
+// String used for password salting
+//
+// Default value: "CHANGE-ME"
+amx_password_salt "CHANGE-ME"
+
 // From which server we load users ?
 //
 // Default value: "1"
@@ -52,3 +57,4 @@ amx_rn_message_time "300.0"
 //
 // Default value: "http://www.example.com/regnick/"
 amx_rn_message_site "http://www.example.com/regnick/"
+

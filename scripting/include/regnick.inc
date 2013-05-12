@@ -22,6 +22,25 @@ random_str(output[], len)
     
 	output[len]=EOS;
 }
+
+/**
+ * Hash a password with a salt
+ *
+ * @access	public
+ * @param	string	string	Clear text password
+ * @return	string			Hashed password
+ */
+public hash_password(string[])
+{
+	new hashed[34], salt[65], temp[98];
+
+	get_cvar_string("amx_password_salt", salt, 64);
+
+	format(temp, 97, "%s%s", salt, string);
+	md5(temp, hashed);
+
+	return hashed;
+}
  
 /**
  * Add prefix to specified table
@@ -109,3 +128,4 @@ stock void:mysql_escape_string(const source[], dest[], len)
 	replace_all(dest,len,"\x1a","\\x1a");
 	replace_all(dest,len,"^"","\^"");
 }
+
