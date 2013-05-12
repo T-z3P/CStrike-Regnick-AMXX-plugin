@@ -52,3 +52,4 @@ amx_rn_message_time "300.0"
 //
 // Default value: "http://www.example.com/regnick/"
 amx_rn_message_site "http://www.example.com/regnick/"
+

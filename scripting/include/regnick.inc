@@ -22,6 +22,23 @@ random_str(output[], len)
     
 	output[len]=EOS;
 }
+
+/**
+ * Return salted MD5 hash
+ *
+ * @access	public
+ * @param	string	string
+ * @return	string
+ */
+public hash_password(string[])
+{
+	new hashed[34], temp[98];
+
+	format(temp, 97, "%s%s", RN_SALT, string);
+	md5(temp, hashed);
+
+	return hashed;
+}
  
 /**
  * Add prefix to specified table

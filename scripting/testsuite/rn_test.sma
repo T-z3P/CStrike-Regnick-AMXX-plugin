@@ -13,6 +13,7 @@ public plugin_init()
 	register_srvcmd("rn_test_mysql_escape", "RN_Test_MySQL_Escape")
 	register_srvcmd("rn_test_mysql_table_prefix", "RN_Test_MySQL_Table_Prefix")
 	register_srvcmd("rn_test_random_string", "RN_Random_String")
+	register_srvcmd("rn_test_md5_password", "RN_Password_Hash")
 	
 	g_TestNum++
 	set_task(7.0, "RunAllTests")
@@ -35,11 +36,21 @@ public RunAllTests()
 	
 	RN_Random_String
 	g_TestNum++
+
+	RN_Password_Hash
+	g_TestNum++
 		
 	server_print("------------------------------------------------------------------")
 }
 
 // ------------------------------------------------------------------------------------------------
+
+public RN_Password_Hash()
+{
+	server_print("[Test #%d] Password: 'abcd' hashed: %s", g_TestNum, hash_password("abcd"));
+	server_print("[Test #%d] Password: 'gentle.ro' hashed: %s", g_TestNum, hash_password("gentle.ro"));
+	server_print("[Test #%d] Password: 'The quick brown fox jumps over the lazy dog' hashed: %s", g_TestNum, hash_password("The quick brown fox jumps over the lazy dog"));
+}
 
 public RN_Random_String()
 {
@@ -97,3 +108,4 @@ public RN_Test_MySQL_Escape()
 
 	server_print("[Test #%d] Escape string: %s", g_TestNum, safe_str)
 }
+
