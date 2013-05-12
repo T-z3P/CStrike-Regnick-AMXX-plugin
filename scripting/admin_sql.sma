@@ -40,15 +40,19 @@
 
 /**
  * Uncomment for passwords encryption
- * 	- not used for now
  */
-//#define RN_ENC_PASSWD
+#define RN_ENC_PASSWD
+
+/**
+ * Password salt
+ */
+new const RN_SALT[] = "CHANGE-ME"
 
 #include <amxmodx>
 #include <amxmisc>
 #if defined USING_SQL
-#include <sqlx>
-#include <regnick>
+	#include <sqlx>
+	#include <regnick>
 #endif
 
 //new Vector:AdminList;
@@ -115,6 +119,7 @@ public plugin_init()
 	register_srvcmd("amx_sqladmins", "adminSql")
 	
 	register_cvar("amx_sql_table_prefix", "")
+
 	register_cvar("amx_rn_serverid", "0");
 	register_cvar("amx_rn_groupid", "0");
 	register_cvar("amx_rn_user_reg", "0");
@@ -123,11 +128,11 @@ public plugin_init()
 	register_cvar("amx_rn_message_site","http://yoursitehere.com")
 	register_cvar("amx_rn_message_time","300.0") // Float
 #endif
-	register_cvar("amx_sql_host", "127.0.0.1")
-	register_cvar("amx_sql_user", "root")
-	register_cvar("amx_sql_pass", "")
-	register_cvar("amx_sql_db", "amx")
-	register_cvar("amx_sql_type", "mysql")
+	register_cvar("amx_sql_host", "127.0.0.1", FCVAR_PROTECTED|FCVAR_SPONLY)
+	register_cvar("amx_sql_user", "root", FCVAR_PROTECTED|FCVAR_SPONLY)
+	register_cvar("amx_sql_pass", "", FCVAR_PROTECTED|FCVAR_SPONLY)
+	register_cvar("amx_sql_db", "amx", FCVAR_PROTECTED|FCVAR_SPONLY)
+	register_cvar("amx_sql_type", "mysql", FCVAR_PROTECTED|FCVAR_SPONLY)
 
 	register_concmd("amx_reloadadmins", "cmdReload", ADMIN_CFG)
 	register_concmd("register", "RNRegister", ADMIN_USER, "<e-mail> <password> - register current nickname in database")
@@ -248,6 +253,9 @@ public delayed_load()
 		server_print("[RN_DEBUG] Show info message to unregistred users: %d", get_cvar_num("amx_rn_message"))
 		server_print("[RN_DEBUG] Info message time show: %f", get_cvar_float("amx_rn_message_time") )
 		server_print("[RN_DEBUG] CStrike-Regnick website: %s", website)
+		#if defined RN_ENC_PASSWD
+		server_print("[RN_DEBUG] Password will be hashed with salted MD5")
+		#endif
 	#endif
 }
 
@@ -485,7 +493,11 @@ getAccess(id, name[], authid[], ip[], password[])
 	static Flags;
 	static Access;
 	static AuthData[44];
+	#if defined RN_ENC_PASSWD
+	static Password[33];
+	#else
 	static Password[32];
+	#endif
 	
 	g_CaseSensitiveName[id] = false;
 
@@ -632,7 +644,13 @@ accessUser(id, name[] = "")
 {
 	remove_user_flags(id)
 	
-	new userip[32], userauthid[32], password[32], passfield[32], username[32]
+	new userip[32], userauthid[32], passfield[32], username[32]
+	#if defined RN_ENC_PASSWD
+		new password[34]
+	#else
+		new password[32]
+	#endif
+
 	
 	get_user_ip(id, userip, 31, 1)
 	get_user_authid(id, userauthid, 31)
@@ -647,8 +665,20 @@ accessUser(id, name[] = "")
 	}
 	
 	get_pcvar_string(amx_password_field, passfield, 31)
-	get_user_info(id, passfield, password, 31)
+	get_user_info(id, passfield, password, sizeof(password)-1)
 	
+	#if defined RN_ENC_PASSWD
+		#if defined RN_DEBUG
+		server_print("Clear text password for user %s is %s", username, password);
+		#endif
+
+		format(password, sizeof(password)-1, "%s", hash_password(password));
+	#endif
+
+	#if defined RN_DEBUG
+	server_print("Hashed password for user %s is %s", username, password);
+	#endif
+
 	new result = getAccess(id, username, userauthid, userip, password)
 	
 	if (result & 1)
@@ -721,7 +751,6 @@ public client_putinserver(id)
 	#if defined USING_SQL
 	if(!is_user_admin(id))
 	{
-		//new rn_message = get_pcvar_num(amx_rn_message)
 		new rn_message = get_cvar_num("amx_rn_message")
 		
 		if(rn_message == 1)
@@ -1019,3 +1048,4 @@ MySqlX_ThreadError(szQuery[], error[], errnum, failstate, id) {
 /* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
 *{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1033\\ f0\\ fs16 \n\\ par }
 */
+
